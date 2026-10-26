@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dashboard – Bundesliga 2026/27</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--tx:#111827;--mut:#6b7280;--bd:#e5e7eb;--ac:#d20515;--cl:#16a34a;--el:#2563eb;--co:#7c3aed;--po:#f59e0b;--rb:#dc2626;--neu:#9ca3af;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1020;--card:#151b2e;--tx:#e5e7eb;--mut:#94a3b8;--bd:#263049;--ac:#ff4d5e;--cl:#22c55e;--el:#60a5fa;--co:#a78bfa;--po:#fbbf24;--rb:#f87171;--neu:#64748b}}
+:root[data-theme="dark"]{--bg:#0b1020;--card:#151b2e;--tx:#e5e7eb;--mut:#94a3b8;--bd:#263049;--ac:#ff4d5e;--cl:#22c55e;--el:#60a5fa;--co:#a78bfa;--po:#fbbf24;--rb:#f87171;--neu:#64748b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;padding:20px;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1{margin:0;font-size:1.5rem}h2{margin:0 0 12px;font-size:1rem}
+small,.mut{color:var(--mut)}
+.grid{display:grid;gap:16px;margin-top:16px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.two{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;min-width:0}
+.kpi b{display:block;font-size:1.5rem;margin-top:4px;color:var(--ac)}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{padding:7px 8px;text-align:center;border-bottom:1px solid var(--bd);white-space:nowrap}
+th{color:var(--mut);font-weight:600}
+td.t{text-align:left;font-weight:600}
+td.p{font-weight:700}
+.z{border-left:4px solid transparent}
+.ch{position:relative;height:420px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:.8rem;color:var(--mut)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px}
+.jg{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--bd);font-size:.9rem}
+.jg:last-child{border:0}
+.jg .n{flex:1}.jg .n:last-of-type{text-align:right}
+.jg .s{font-weight:700;min-width:48px;text-align:center}
+.pb{display:flex;height:6px;border-radius:3px;overflow:hidden;margin-top:5px;background:var(--bd)}
+.pb span{display:block}
+.fix{padding:9px 0;border-bottom:1px solid var(--bd);font-size:.9rem}
+.fix:last-child{border:0}
+.fix .r{display:flex;justify-content:space-between;gap:8px}
+.fix .d{font-size:.75rem;color:var(--mut);margin-bottom:3px}
+.pct{font-size:.72rem;color:var(--mut);display:flex;justify-content:space-between;margin-top:3px}
+</style>
+</head>
+<body>
+<h1>⚽ Bundesliga 2026/27</h1>
+<small>Dados atualizados em 26/10/2026 · horários de Brasília · gols por time não disponíveis na fonte</small>
+
+<div class="grid kpis" id="kpis"></div>
+
+<div class="grid two">
+  <div class="card"><h2>Classificação</h2><div class="wrap"><table id="tab"></table></div>
+    <div class="legend">
+      <span><i style="background:var(--cl)"></i>Champions (1–4)</span>
+      <span><i style="background:var(--el)"></i>Europa League (5)</span>
+      <span><i style="background:var(--co)"></i>Conference (6)</span>
+      <span><i style="background:var(--po)"></i>Repescagem (16)</span>
+      <span><i style="background:var(--rb)"></i>Rebaixamento (17–18)</span>
+    </div>
+  </div>
+  <div class="card"><h2>Pontos por time</h2><div class="ch"><canvas id="gPts"></canvas></div></div>
+</div>
+
+<div class="grid two">
+  <div class="card"><h2>Vitórias, empates e derrotas</h2><div class="ch"><canvas id="gVed"></canvas></div></div>
+  <div class="card"><h2>Resultados recentes</h2><div id="res"></div></div>
+</div>
+
+<div class="grid">
+  <div class="card"><h2>Próximos jogos e probabilidades</h2><div id="prox"></div></div>
+</div>
+
+<script>
+// ===== DADOS =====
+const nomes={BMU:"Bayern de Munique",BVB:"Borussia Dortmund",SCF:"Freiburg",LEV:"Bayer Leverkusen",RBL:"RB Leipzig",SVW:"Werder Bremen",M05:"Mainz",SVE:"Elversberg",FCA:"Augsburg",TSG:"Hoffenheim",HSV:"Hamburgo",KOE:"Colônia",PAD:"Paderborn",SGE:"Eintracht Frankfurt",VFB:"Stuttgart",SCH:"Schalke 04",UNI:"Union Berlin",BMG:"Gladbach"};
+// [sigla, vitórias, empates, derrotas, pontos]
+const tabela=[["BMU",5,2,0,17],["BVB",5,2,0,17],["SCF",4,1,2,13],["LEV",4,1,2,13],["RBL",4,0,3,12],["SVW",3,3,1,12],["M05",3,1,3,10],["SVE",3,1,3,10],["FCA",2,3,2,9],["TSG",3,0,4,9],["HSV",3,0,4,9],["KOE",2,2,3,8],["PAD",2,2,3,8],["SGE",2,2,3,8],["VFB",2,0,5,6],["SCH",1,3,3,6],["UNI",1,3,3,6],["BMG",1,0,6,3]];
+const resultados=[["18/10","BMG",1,"TSG",2],["23/10","VFB",2,"BMG",3],["24/10","RBL",4,"SVE",0],["24/10","FCA",1,"UNI",1],["24/10","M05",2,"SVW",3],["24/10","KOE",0,"SCH",0],["24/10","PAD",1,"HSV",0],["24/10","BVB",1,"SGE",0],["25/10","TSG",3,"LEV",0],["25/10","SCF",1,"BMU",3]];
+const proximos=[["Sex 30/10 · 16:30","SVE","M05",30.2,24.7,45.1],["Sáb 31/10 · 11:30","LEV","VFB",53,21.8,25.2],["Sáb 31/10 · 11:30","FCA","SCF",32.5,24.8,42.7],["Sáb 31/10 · 11:30","BMG","PAD",48.9,23.8,27.3],["Sáb 31/10 · 11:30","SVW","TSG",32.8,24.1,43.1],["Sáb 31/10 · 11:30","SCH","RBL",24.4,24.4,51.2],["Sáb 31/10 · 14:30","BMU","BVB",71.4,15.2,13.4],["Dom 01/11 · 11:30","UNI","KOE",38.3,26,35.7],["Dom 01/11 · 13:30","SGE","HSV",57.5,21.5,21],["Sex 06/11 · 16:30","HSV","BMG",41.7,25.4,32.9]];
+
+// ===== PROCESSAMENTO =====
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const zona=pos=>pos<=4?"--cl":pos==5?"--el":pos==6?"--co":pos==16?"--po":pos>=17?"--rb":"--neu";
+const jogos=t=>t[1]+t[2]+t[3];
+const gols=resultados.reduce((s,r)=>s+r[2]+r[4],0);
+const lider=tabela[0], vice=tabela[1];
+const melhorAtaque=null;
+const fmt=n=>n.toFixed(1).replace(".",",");
+
+// ===== KPIs =====
+const kpis=[
+ ["Líderes (empatados)",nomes[lider[0]].split(" ")[0]+" e "+nomes[vice[0]].split(" ")[0]],
+ ["Pontos do topo",lider[4]+" pts"],
+ ["Jogos por time",jogos(lider)],
+ ["Gols/jogo (últimos "+resultados.length+")",fmt(gols/resultados.length)],
+ ["Invictos",tabela.filter(t=>t[3]==0).length+" times"]
+];
+document.getElementById("kpis").innerHTML=kpis.map(k=>`<div class="card kpi"><small>${k[0]}</small><b>${k[1]}</b></div>`).join("");
+
+// ===== TABELA =====
+document.getElementById("tab").innerHTML="<tr><th>#</th><th style='text-align:left'>Time</th><th>J</th><th>V</th><th>E</th><th>D</th><th>Pts</th><th>Aprov.</th></tr>"+
+tabela.map((t,i)=>`<tr><td class="z" style="border-left-color:var(${zona(i+1)})">${i+1}</td><td class="t">${nomes[t[0]]}</td><td>${jogos(t)}</td><td>${t[1]}</td><td>${t[2]}</td><td>${t[3]}</td><td class="p">${t[4]}</td><td>${Math.round(t[4]/(jogos(t)*3)*100)}%</td></tr>`).join("");
+
+// ===== RESULTADOS =====
+document.getElementById("res").innerHTML=resultados.map(r=>`<div class="jg"><span class="mut">${r[0]}</span><span class="n">${nomes[r[1]]}</span><span class="s">${r[2]} × ${r[4]}</span><span class="n">${nomes[r[3]]}</span></div>`).join("");
+
+// ===== PRÓXIMOS JOGOS =====
+document.getElementById("prox").innerHTML=proximos.map(p=>`<div class="fix"><div class="d">${p[0]}</div><div class="r"><b>${nomes[p[1]]}</b><b>${nomes[p[2]]}</b></div>
+<div class="pb"><span style="width:${p[3]}%;background:var(--cl)"></span><span style="width:${p[4]}%;background:var(--neu)"></span><span style="width:${p[5]}%;background:var(--el)"></span></div>
+<div class="pct"><span>${fmt(p[3])}%</span><span>empate ${fmt(p[4])}%</span><span>${fmt(p[5])}%</span></div></div>`).join("");
+
+// ===== GRÁFICOS =====
+function desenhar(){
+  Chart.defaults.color=css("--mut");Chart.defaults.borderColor=css("--bd");
+  const labels=tabela.map(t=>t[0]);
+  new Chart(document.getElementById("gPts"),{type:"bar",
+    data:{labels,datasets:[{label:"Pontos",data:tabela.map(t=>t[4]),backgroundColor:tabela.map((_,i)=>css(zona(i+1)))}]},
+    options:{indexAxis:"y",maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:i=>nomes[labels[i[0].dataIndex]]}}},scales:{x:{beginAtZero:true}}}});
+  new Chart(document.getElementById("gVed"),{type:"bar",
+    data:{labels,datasets:[
+      {label:"Vitórias",data:tabela.map(t=>t[1]),backgroundColor:css("--cl")},
+      {label:"Empates",data:tabela.map(t=>t[2]),backgroundColor:css("--neu")},
+      {label:"Derrotas",data:tabela.map(t=>t[3]),backgroundColor:css("--rb")}]},
+    options:{indexAxis:"y",maintainAspectRatio:false,scales:{x:{stacked:true},y:{stacked:true}},plugins:{tooltip:{callbacks:{title:i=>nomes[labels[i[0].dataIndex]]}}}}});
+}
+desenhar();
+</script>
+</body>
+</html>
